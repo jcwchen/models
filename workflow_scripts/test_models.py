@@ -7,7 +7,13 @@ import os
 import test_utils
 
 
-def main():
+def main(argv):
+  test_onnx, test_onnxruntime = True, True
+  if len(argv) >= 2 and argv[1] == 'onnx':
+    test_onnx, test_onnxruntime = True, False
+  elif len(argv) >= 2 and argv[1] == 'onnxruntime':
+    test_onnx, test_onnxruntime = False, True
+    
   cwd_path = Path.cwd()
   # obtain list of added or modified files in this PR
   obtain_diff = subprocess.Popen(['git', 'diff', '--name-only', '--diff-filter=AM', 'origin/master', 'HEAD'],
@@ -17,7 +23,6 @@ def main():
 
   # identify list of changed onnx models in model Zoo
   model_list = [str(model).replace("b'","").replace("'", "") for model in diff_list if ".onnx" in str(model)]
-
   # run lfs install before starting the tests
   test_utils.run_lfs_install()
 
@@ -38,15 +43,15 @@ def main():
           # check whether 'test_data_set_0' exists
           model_path_from_tar, test_data = test_utils.extract_test_data(tar_gz_path)
           # check the onnx model from .tar.gz
-          check_model.by_onnx(model_path_from_tar, model_name)
-          check_model.by_onnxruntime(model_path_from_tar, model_name, test_data)
+          if test_onnx: check_model.by_onnx(model_path_from_tar, model_name)
+          if test_onnxruntime: check_model.by_onnxruntime(model_path_from_tar, model_name, test_data)
           print('Model {} from .tar.gz has been successfully checked. '.format(model_name))
         else:
           test_utils.pull_lfs_file(model_path)
 
         # check the onnx model from GitHub
-        check_model.by_onnx(model_path, model_name)
-        check_model.by_onnxruntime(model_path, model_name, test_data)
+        if test_onnx: check_model.by_onnx(model_path, model_name)
+        if test_onnxruntime: check_model.by_onnxruntime(model_path, model_name, test_data)
         print('Model {} from GitHub has been successfully checked. '.format(model_name))
 
       except Exception as e:
@@ -61,4 +66,4 @@ def main():
       sys.exit(1)
 
 if __name__ == '__main__':
-    main()
+    main(sys.argv)
